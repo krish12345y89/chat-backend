@@ -17,6 +17,7 @@ servers:
 paths:
   /health:
     get:
+      operationId: healthCheck
       tags:
         - Health
       summary: Health check
@@ -49,6 +50,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
+      security: []
       responses:
         '200':
           description: Token issued
@@ -62,7 +64,6 @@ paths:
               schema:
                 type: string
         '400':
-            security: []
           description: Validation error
           content:
             application/json:
@@ -81,6 +82,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/RegisterRequest'
+      security: []
       responses:
         '201':
           description: Created and authenticated
@@ -94,7 +96,6 @@ paths:
               schema:
                 type: string
         '400':
-            security: []
           description: Validation error
           content:
             application/json:
@@ -127,6 +128,10 @@ paths:
 
   /chats/{userId}/with/{withUser}:
     get:
+      operationId: getChatHistory
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
       tags:
         - Chats
       summary: Fetch chat history (optional REST complement)
@@ -153,6 +158,14 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ChatMessage'
+              examples:
+                sample:
+                  value:
+                    - _id: "m1"
+                      senderId: alice
+                      receiverId: bob
+                      message: hi
+                      createdAt: '2025-12-19T20:35:00.000Z'
         '401':
           description: Unauthorized
           content:
@@ -162,6 +175,10 @@ paths:
 
   /chats/{userId}/send:
     post:
+      operationId: sendMessage
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
       tags:
         - Chats
       summary: Send a message (REST alternative to socket)
@@ -187,6 +204,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatMessage'
+              examples:
+                created:
+                  value:
+                    _id: "m1"
+                    senderId: alice
+                    receiverId: bob
+                    message: Hello Bob
+                    createdAt: '2025-12-19T20:35:00.000Z'
         '400':
           description: Validation error
           content:
@@ -202,6 +227,10 @@ paths:
 
   /chats/{userId}/conversations:
     get:
+      operationId: listConversations
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
       tags:
         - Chats
       summary: List conversations for a user
@@ -222,6 +251,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Conversation'
+              examples:
+                sample:
+                  value:
+                    - partner: bob
+                      lastMessage: "See you later"
+                      lastAt: '2025-12-19T20:50:00.000Z'
         '401':
           description: Unauthorized
           content:

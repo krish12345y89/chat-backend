@@ -19,13 +19,11 @@ describe("Integration: auth + chat REST flows", () => {
     jest
       .spyOn(userService, "findByUsername")
       .mockResolvedValueOnce(null as any);
-    jest
-      .spyOn(userService, "createUser")
-      .mockResolvedValueOnce({
-        _id: aliceId,
-        username: "alice",
-        displayName: "Alice",
-      } as any);
+    jest.spyOn(userService, "createUser").mockResolvedValueOnce({
+      _id: aliceId,
+      username: "alice",
+      displayName: "Alice",
+    } as any);
 
     const reg = await request(app)
       .post("/auth/register")
@@ -34,14 +32,12 @@ describe("Integration: auth + chat REST flows", () => {
     expect(reg.body).toHaveProperty("token");
 
     // mock login: findByUsername returns user and validatePassword true
-    jest
-      .spyOn(userService, "findByUsername")
-      .mockResolvedValueOnce({
-        _id: aliceId,
-        username: "alice",
-        displayName: "Alice",
-        passwordHash: "x",
-      } as any);
+    jest.spyOn(userService, "findByUsername").mockResolvedValueOnce({
+      _id: aliceId,
+      username: "alice",
+      displayName: "Alice",
+      passwordHash: "x",
+    } as any);
     jest
       .spyOn(userService, "validatePassword")
       .mockResolvedValueOnce(true as any);
@@ -54,13 +50,11 @@ describe("Integration: auth + chat REST flows", () => {
     expect(login.body).toHaveProperty("token");
 
     // mock findById for /me
-    jest
-      .spyOn(userService, "findById")
-      .mockResolvedValueOnce({
-        _id: aliceId,
-        username: "alice",
-        displayName: "Alice",
-      } as any);
+    jest.spyOn(userService, "findById").mockResolvedValueOnce({
+      _id: aliceId,
+      username: "alice",
+      displayName: "Alice",
+    } as any);
 
     // use agent's cookie session to call /auth/me without Authorization header
     const me = await agent.get("/auth/me").expect(200);
@@ -108,15 +102,13 @@ describe("Integration: auth + chat REST flows", () => {
     expect(history.body[0].message).toBe("hello");
 
     // mock getConversations
-    jest
-      .spyOn(chatService, "getConversations")
-      .mockResolvedValueOnce([
-        {
-          partner: bobId,
-          lastMessage: "hello",
-          lastAt: new Date().toISOString(),
-        },
-      ] as any);
+    jest.spyOn(chatService, "getConversations").mockResolvedValueOnce([
+      {
+        partner: bobId,
+        lastMessage: "hello",
+        lastAt: new Date().toISOString(),
+      },
+    ] as any);
     const conv = await request(app)
       .get(`/chats/${aliceId}/conversations`)
       .set("Authorization", `Bearer ${token}`)
