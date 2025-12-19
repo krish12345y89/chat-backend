@@ -35,6 +35,7 @@ paths:
 
   /auth/login:
     post:
+      operationId: authLogin
       tags:
         - Auth
       summary: Issue a test JWT (for evaluation only)
@@ -55,8 +56,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              description: HttpOnly session cookie (connect.sid) is set when session store is enabled.
+              schema:
+                type: string
         '400':
+            security: []
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      operationId: authRegister
+      tags:
+        - Auth
+      summary: Register a new user (creates account and returns JWT + session cookie)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created and authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          headers:
+            Set-Cookie:
+              description: HttpOnly session cookie (connect.sid) is set when session store is enabled.
+              schema:
+                type: string
+        '400':
+            security: []
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      operationId: authMe
+      tags:
+        - Auth
+      summary: Get current authenticated user
+      description: Returns current user based on Bearer token or session cookie.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -200,11 +263,31 @@ components:
     LoginRequest:
       type: object
       properties:
-        userId:
+        username:
           type: string
           example: alice
+        password:
+          type: string
+          example: secret
       required:
-        - userId
+        - username
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: alice
+        password:
+          type: string
+          example: secret
+        displayName:
+          type: string
+          example: Alice
+      required:
+        - username
+        - password
 
     LoginResponse:
       type: object
@@ -212,6 +295,22 @@ components:
         token:
           type: string
           description: JWT token to use in Socket.IO auth
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+      example:
+        id: "64a1a1a1a1a1a1a1a1a1a1a1"
+        username: alice
+        displayName: Alice
 
     Error:
       type: object
