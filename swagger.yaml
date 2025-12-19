@@ -1,0 +1,323 @@
+openapi: 3.0.0
+info:
+  title: Chat Backend API
+  version: 1.0.0
+  description: |
+    Real-time one-to-one chat backend. Primary communication happens over Socket.IO
+    (see `x-socket-events` section below). A few helper REST endpoints exist for
+    health checks and issuing test JWT tokens for local/evaluation use.
+  contact:
+    name: Chat Backend Team
+    email: ops@example.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns service health status.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Issue a test JWT (for evaluation only)
+      description: |
+        Accepts a JSON body with `userId` and returns a signed JWT that can be used
+        for Socket.IO `auth.token`. This endpoint is intended for local tests and
+        evaluation; replace with real auth in production.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chats/{userId}/with/{withUser}:
+    get:
+      tags:
+        - Chats
+      summary: Fetch chat history (optional REST complement)
+      description: |
+        Returns stored chat messages between two users. This REST route is an optional
+        convenience for clients that cannot use sockets; primary interaction is via Socket.IO.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: withUser
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatMessage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chats/{userId}/send:
+    post:
+      tags:
+        - Chats
+      summary: Send a message (REST alternative to socket)
+      description: |
+        Persist a message from the authenticated `userId` to `receiverId`. The server
+        will attempt realtime delivery if the recipient is online.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessagePayload'
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chats/{userId}/conversations:
+    get:
+      tags:
+        - Chats
+      summary: List conversations for a user
+      description: |
+        Returns a list of conversation partners with last message and timestamp.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversations list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /socket:
+    get:
+      tags:
+        - Socket.IO
+      summary: Socket.IO connection (documentational)
+      description: |
+        This endpoint is a documentation placeholder — the server accepts Socket.IO
+        connections (WebSocket/long-polling). Clients should connect using the
+        Socket.IO client and provide a JWT as `auth.token` during connection.
+        The real-time API surface is described under `x-socket-events` in this OpenAPI
+        document with payload schemas and examples.
+      responses:
+        '101':
+          description: Socket upgrade (informational)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: |
+        Session cookie set by the server after login/registration. Clients may
+        authenticate via this cookie instead of Bearer JWT. When using secure
+        cookies in production, the cookie will be `HttpOnly` and `Secure`.
+
+  schemas:
+    LoginRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: alice
+      required:
+        - userId
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token to use in Socket.IO auth
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Bad request
+
+    ChatMessage:
+      type: object
+      properties:
+        _id:
+          type: string
+        senderId:
+          type: string
+        receiverId:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        _id: "65d9f0b6e4d1a3a1b2c3d4e5"
+        senderId: alice
+        receiverId: bob
+        message: Hello Bob
+        createdAt: '2025-12-19T20:35:00.000Z'
+
+    SendMessagePayload:
+      type: object
+      properties:
+        receiverId:
+          type: string
+        message:
+          type: string
+      required:
+        - receiverId
+        - message
+      example:
+        receiverId: bob
+        message: Hello Bob
+
+    ChatHistoryResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ChatMessage'
+    Conversation:
+      type: object
+      properties:
+        partner:
+          type: string
+        lastMessage:
+          type: string
+        lastAt:
+          type: string
+          format: date-time
+      example:
+        partner: bob
+        lastMessage: "See you later"
+        lastAt: '2025-12-19T20:50:00.000Z'
+
+  x-socket-events:
+    description: |
+      Socket.IO events supported by the server. These are documented here for client
+      implementers; they are not native OpenAPI operations but helpful for tests and
+      integration. Connect using the Socket.IO client, for example:
+      ```js
+      const socket = io('http://localhost:3000', { auth: { token: JWT } });
+      ```
+    events:
+      connection:
+        description: Emitted when a client successfully connects. Requires a valid JWT in `auth.token`.
+        payload: null
+      send_message:
+        direction: client->server
+        description: Send a one-to-one message to another user. Server persists message and attempts realtime delivery.
+        payload:
+          $ref: '#/components/schemas/SendMessagePayload'
+        responses:
+          message_sent:
+            description: Acknowledgement sent back to sender with saved message object
+            payload:
+              $ref: '#/components/schemas/ChatMessage'
+      receive_message:
+        direction: server->client
+        description: Emitted to a recipient client when a message arrives in realtime.
+        payload:
+          $ref: '#/components/schemas/ChatMessage'
+      fetch_history:
+        direction: client->server
+        description: Request chat history with a particular user. Server replies with `chat_history` event.
+        payload:
+          type: object
+          properties:
+            withUser:
+              type: string
+      chat_history:
+        direction: server->client
+        description: Response to `fetch_history` containing an array of messages.
+        payload:
+          $ref: '#/components/schemas/ChatHistoryResponse'
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []

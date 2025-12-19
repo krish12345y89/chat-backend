@@ -1,0 +1,30 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    image: chat-backend:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo:27017/chat
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=supersecret
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1"]
+
+volumes:
+  mongo-data:
